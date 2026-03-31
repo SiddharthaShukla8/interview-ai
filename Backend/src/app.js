@@ -8,11 +8,8 @@ app.use(express.json())
 app.use(cookieParser())
 app.use(cors({
     origin: function (origin, callback) {
-        if (!origin) return callback(null, true);
-        if (origin.startsWith("http://localhost:")) {
-            return callback(null, true);
-        }
-        return callback(null, false);
+        // Allows all origins (equivalent to "*" but works with credentials: true)
+        return callback(null, true);
     },
     credentials: true
 }))
