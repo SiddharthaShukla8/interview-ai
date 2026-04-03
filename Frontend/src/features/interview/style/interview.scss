@@ -1,4 +1,4 @@
-// ── Shared Variables (mirrors home.scss theme) ────────────────────────────────
+// ── Shared Variables ─────────────────────────────────────────────────────────
 $bg-page: #0d1117;
 $bg-card: #161b22;
 $bg-panel: #1c2230;
@@ -29,6 +29,11 @@ $severity-low: #3fb950;
     align-items: stretch;
     padding: 1.5rem;
     box-sizing: border-box;
+
+    @media (max-width: 768px) {
+        padding: 0;
+        align-items: flex-start;
+    }
 }
 
 // ── 3-Column Layout ───────────────────────────────────────────────────────────
@@ -41,12 +46,34 @@ $severity-low: #3fb950;
     border: 1px solid $border-color;
     border-radius: 1rem;
     justify-content: space-between;
+
+    @media (max-width: 1024px) {
+        // Hide right sidebar on tablet; nav stays
+        .interview-sidebar,
+        .sidebar-divider {
+            display: none;
+        }
+    }
+
+    @media (max-width: 768px) {
+        flex-direction: column;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        border-top: none;
+        min-height: 100vh;
+    }
 }
 
 .interview-divider {
     width: 1px;
     background-color: $border-color;
     flex-shrink: 0;
+
+    @media (max-width: 768px) {
+        width: 100%;
+        height: 1px;
+    }
 }
 
 // ── Left Nav ─────────────────────────────────────────────────────────────────
@@ -59,8 +86,15 @@ $severity-low: #3fb950;
     justify-content: space-between;
     gap: 0.25rem;
 
-
-
+    @media (max-width: 768px) {
+        width: 100%;
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 0.75rem 1rem;
+        gap: 0.25rem;
+        border-bottom: 1px solid $border-color;
+        overflow-x: auto;
+    }
 
     &__label {
         font-size: 0.7rem;
@@ -70,6 +104,10 @@ $severity-low: #3fb950;
         color: $text-muted;
         padding: 0 0.75rem;
         margin-bottom: 0.5rem;
+
+        @media (max-width: 768px) {
+            display: none;
+        }
     }
 
     &__item {
@@ -87,6 +125,7 @@ $severity-low: #3fb950;
         cursor: pointer;
         text-align: left;
         transition: background-color 0.15s, color 0.15s;
+        white-space: nowrap;
 
         &:hover {
             background-color: $bg-panel;
@@ -100,6 +139,13 @@ $severity-low: #3fb950;
             .interview-nav__icon svg {
                 stroke: $accent;
             }
+        }
+
+        @media (max-width: 768px) {
+            width: auto;
+            flex-shrink: 0;
+            font-size: 0.8rem;
+            padding: 0.5rem 0.65rem;
         }
     }
 
@@ -120,12 +166,16 @@ $severity-low: #3fb950;
     padding-bottom: 5rem;
     align-items: flex-start;
 
+    @media (max-width: 768px) {
+        padding: 1.25rem 1rem;
+        max-height: unset;
+        overflow-y: visible;
+        padding-bottom: 3rem;
+    }
 
-
-
-
-
-
+    @media (max-width: 480px) {
+        padding: 1rem 0.75rem;
+    }
 
     section {
         min-height: 100%;
@@ -139,6 +189,7 @@ $severity-low: #3fb950;
     margin-bottom: 1.5rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid $border-color;
+    flex-wrap: wrap;
 
     h2 {
         font-size: 1.1rem;
@@ -203,6 +254,10 @@ $severity-low: #3fb950;
         font-weight: 500;
         color: $text-primary;
         line-height: 1.5;
+
+        @media (max-width: 480px) {
+            font-size: 0.85rem;
+        }
     }
 
     &__chevron {
@@ -269,7 +324,6 @@ $severity-low: #3fb950;
     gap: 0;
     position: relative;
 
-    // vertical timeline line
     &::before {
         content: '';
         position: absolute;
@@ -289,7 +343,6 @@ $severity-low: #3fb950;
     padding: 0.75rem 0 0.75rem 3.5rem;
     position: relative;
 
-    // dot on timeline
     &::before {
         content: '';
         position: absolute;
@@ -306,6 +359,7 @@ $severity-low: #3fb950;
         display: flex;
         align-items: center;
         gap: 0.6rem;
+        flex-wrap: wrap;
     }
 
     &__badge {
@@ -323,6 +377,8 @@ $severity-low: #3fb950;
         font-size: 0.95rem;
         font-weight: 600;
         color: $text-primary;
+
+        @media (max-width: 480px) { font-size: 0.875rem; }
     }
 
     &__tasks {
@@ -361,11 +417,19 @@ $severity-low: #3fb950;
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
+
+    @media (max-width: 1024px) {
+        display: none;
+    }
 }
 
 .sidebar-divider {
     height: 1px;
     background-color: $border-color;
+
+    @media (max-width: 1024px) {
+        display: none;
+    }
 }
 
 // Match Score

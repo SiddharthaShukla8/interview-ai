@@ -17,4 +17,10 @@
     &:active{
         transform: scale(0.9);
     }
+
+    @media (max-width: 480px) {
+        padding-block: 0.8rem;
+        border-radius: 0.75rem;
+        font-size: 0.95rem;
+    }
 }
