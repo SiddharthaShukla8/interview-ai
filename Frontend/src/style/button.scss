@@ -6,16 +6,25 @@
     padding-block: 0.75rem;
     border-radius: 1rem;
     cursor: pointer;
+    font-family: inherit;
 
     transition: all 0.3s ease-in-out;
 
     &.primary-button{
-        background-color: #e1034d;
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
         color: white;
+        box-shadow: 0 4px 20px rgba(99,102,241,0.35);
+        font-weight: 600;
+
+        &:hover {
+            opacity: 0.92;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(99,102,241,0.45);
+        }
     }
 
     &:active{
-        transform: scale(0.9);
+        transform: scale(0.97);
     }
 
     @media (max-width: 480px) {
