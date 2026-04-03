@@ -29,14 +29,28 @@ app.use(helmet({
 // NOTE: Use a function so env vars are read at request time, not at module load
 app.use(cors({
     origin: (origin, callback) => {
-        const allowed = [
-            process.env.FRONTEND_URL || 'http://localhost:5173',
+        const allowedUrls = [
+            process.env.FRONTEND_URL,          // e.g. http://localhost:5174
+            process.env.FRONTEND_URL_PROD,     // e.g. https://vercel.app
             'http://localhost:5173',
             'http://localhost:3000',
         ];
-        if (!origin || allowed.includes(origin)) {
+        
+        // Remove undefined/null from the allowed list
+        const allowed = allowedUrls.filter(Boolean);
+
+        // Allow requests with no origin (like mobile apps, Postman)
+        if (!origin) {
+            console.log('[CORS] Allowed request no origin');
             return callback(null, true);
         }
+
+        if (allowed.includes(origin)) {
+            console.log(`[CORS] Allowed origin: ${origin}`);
+            return callback(null, true);
+        }
+        
+        console.warn(`[CORS] Blocked origin: ${origin}`);
         callback(new Error(`CORS: origin ${origin} not allowed`));
     },
     credentials: true,

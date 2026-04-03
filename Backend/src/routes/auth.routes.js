@@ -40,22 +40,19 @@ authRouter.get(
     '/google',
     passport.authenticate('google', {
         scope: ['profile', 'email'],
-        prompt: 'select_account',  // always show account picker
+        prompt: 'select_account',
     })
 );
 
 /**
  * GET /api/auth/google/callback
  * Google redirects here after user grants permission.
- * On success → issue JWT → redirect to frontend /oauth/callback?token=...
- * On failure → redirect to frontend /login?error=google_failed
  */
 authRouter.get(
     '/google/callback',
     passport.authenticate('google', {
-        // Redirect to frontend on failure (don't use session:false here — let passport manage the session for this handshake)
-        failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=google_failed`,
-        failureMessage: true,
+        session: false,
+        failureRedirect: '/login',
     }),
     googleCallbackController
 );

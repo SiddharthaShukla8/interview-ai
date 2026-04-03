@@ -7,10 +7,13 @@ const jwt = require('jsonwebtoken');
 async function googleCallbackController(req, res) {
     try {
         const user = req.user;
+        
+        // Strip trailing slashes to avoid double slashes in URL
+        let origin = req.session.oauthOrigin || process.env.FRONTEND_URL || 'http://localhost:5174';
+        if (origin.endsWith('/')) origin = origin.slice(0, -1);
 
         if (!user) {
-            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-            return res.redirect(`${frontendUrl}/oauth/callback?error=google_auth_failed`);
+            return res.redirect(`${origin}/oauth/callback?error=google_auth_failed`);
         }
 
         const token = jwt.sign(
@@ -26,13 +29,13 @@ async function googleCallbackController(req, res) {
             maxAge: 24 * 60 * 60 * 1000, // 1 day
         });
 
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         // Redirect to frontend OAuth callback page with token in query param
-        res.redirect(`${frontendUrl}/oauth/callback?token=${token}`);
+        res.redirect(`${origin}/oauth/callback?token=${token}`);
     } catch (err) {
         console.error('Google callback error:', err);
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-        res.redirect(`${frontendUrl}/oauth/callback?error=server_error`);
+        let origin = req.session?.oauthOrigin || process.env.FRONTEND_URL || 'http://localhost:5174';
+        if (origin.endsWith('/')) origin = origin.slice(0, -1);
+        res.redirect(`${origin}/oauth/callback?error=server_error`);
     }
 }
 
