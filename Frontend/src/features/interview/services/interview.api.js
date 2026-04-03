@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-    baseURL: "https://interview-ai-backend-d3j3.onrender.com",
+    baseURL: "http://localhost:3000",
     withCredentials: true,
 })
 
@@ -23,18 +23,22 @@ api.interceptors.request.use(
  * @description Service to generate interview report based on user self description, resume and job description.
  */
 export const generateInterviewReport = async ({ jobDescription, selfDescription, resumeFile }) => {
-
+    console.log("Came bro")
     const formData = new FormData()
     formData.append("jobDescription", jobDescription)
-    formData.append("selfDescription", selfDescription)
-    formData.append("resume", resumeFile)
-
+    if (selfDescription) {
+        formData.append("selfDescription", selfDescription)
+    }
+    if (resumeFile) {
+        formData.append("resume", resumeFile)
+    }
+    console.log("Here as welll")
     const response = await api.post("/api/interview/", formData, {
         headers: {
             "Content-Type": "multipart/form-data"
         }
     })
-
+    console.log("Here as welll bro")
     return response.data
 
 }

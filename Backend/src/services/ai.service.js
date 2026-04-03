@@ -6,7 +6,7 @@ const puppeteer = require("puppeteer")
 const ai = new GoogleGenAI({
     apiKey: process.env.GOOGLE_GENAI_API_KEY
 })
-
+console.log("Hello", process.env.GOOGLE_GENAI_API_KEY)
 
 const interviewReportSchema = z.object({
     matchScore: z.number().describe("A score between 0 and 100 indicating how well the candidate's profile matches the job describe"),
@@ -34,25 +34,40 @@ const interviewReportSchema = z.object({
 
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
 
+  const prompt = `Generate an interview report for a candidate:
+  Resume: ${resume}
+  Self Description: ${selfDescription}
+  Job Description: ${jobDescription}`;
 
-    const prompt = `Generate an interview report for a candidate with the following details:
-                        Resume: ${resume}
-                        Self Description: ${selfDescription}
-                        Job Description: ${jobDescription}
-`
-
+  try {
     const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: zodToJsonSchema(interviewReportSchema),
-        }
-    })
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: zodToJsonSchema(interviewReportSchema),
+      }
+    });
 
-    return JSON.parse(response.text)
+    if (!response.text) {
+      throw new Error("Empty AI response");
+    }
 
+    let parsed;
 
+    try {
+      parsed = JSON.parse(response.text);
+    } catch (err) {
+      console.error("AI RAW RESPONSE:", response.text);
+      throw new Error("Invalid JSON from AI");
+    }
+
+    return parsed;
+
+  } catch (error) {
+    console.error("AI ERROR:", error);
+    throw new Error("Failed to generate interview report");
+  }
 }
 
 
@@ -96,7 +111,7 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
                     `
 
     const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.0-flash",
         contents: prompt,
         config: {
             responseMimeType: "application/json",
@@ -106,7 +121,7 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
 
 
     const jsonContent = JSON.parse(response.text)
-
+    console.log(jsonContent)
     const pdfBuffer = await generatePdfFromHtml(jsonContent.html)
 
     return pdfBuffer
