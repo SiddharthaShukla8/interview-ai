@@ -11,10 +11,10 @@ passport.use(
         {
             clientID: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            callbackURL:
-  process.env.NODE_ENV === "production"
-    ? "https://interview-ai-backend-d3j3.onrender.com/api/auth/google/callback"
-    : "http://localhost:3000/api/auth/google/callback"
+            // Fallback robustly: Prefer the explicitly defined BACKEND_URL env var, or fallback entirely to relative path + proxy
+            callbackURL: process.env.BACKEND_URL 
+                ? `${process.env.BACKEND_URL}/api/auth/google/callback` 
+                : '/api/auth/google/callback',
         },
         async (_accessToken, _refreshToken, profile, done) => {
             try {
