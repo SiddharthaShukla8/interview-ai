@@ -1,195 +1,353 @@
-import React, { useState, useEffect } from 'react'
-import '../style/interview.scss'
-import { useInterview } from '../hooks/useInterview.js'
-import { useNavigate, useParams } from 'react-router'
+import React, { useState, useEffect } from 'react';
+import { useInterview } from '../hooks/useInterview.js';
+import { useNavigate, useParams } from 'react-router';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    Code2, MessageSquare, Map, ChevronDown, Download,
+    ArrowLeft, Zap, AlertTriangle, CheckCircle2, Info
+} from 'lucide-react';
+import { InterviewPageSkeleton } from '@/components/SkeletonLoader.jsx';
+import Spinner from '@/components/Spinner.jsx';
+import { useToast } from '@/components/ToastContext.jsx';
 
-
-
+// ── Nav items (using Lucide icons) ────────────────────────────────────────
 const NAV_ITEMS = [
-    { id: 'technical', label: 'Technical Questions', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>) },
-    { id: 'behavioral', label: 'Behavioral Questions', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>) },
-    { id: 'roadmap', label: 'Road Map', icon: (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11" /></svg>) },
-]
+    { id: 'technical', label: 'Technical', fullLabel: 'Technical Questions', Icon: Code2 },
+    { id: 'behavioral', label: 'Behavioral', fullLabel: 'Behavioral Questions', Icon: MessageSquare },
+    { id: 'roadmap', label: 'Road Map', fullLabel: 'Preparation Road Map', Icon: Map },
+];
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+// ── Severity icon for skill gaps ──────────────────────────────────────────
+const severityConfig = {
+    high: { cls: 'bg-red-500/10 text-red-400 ring-red-400/20', Icon: AlertTriangle },
+    medium: { cls: 'bg-yellow-400/10 text-yellow-400 ring-yellow-400/20', Icon: Info },
+    low: { cls: 'bg-blue-400/10 text-blue-400 ring-blue-400/20', Icon: CheckCircle2 },
+};
+
+// ── Question Accordion ────────────────────────────────────────────────────
 const QuestionCard = ({ item, index }) => {
-    const [ open, setOpen ] = useState(false)
+    const [open, setOpen] = useState(false);
+
     return (
-        <div className='q-card'>
-            <div className='q-card__header' onClick={() => setOpen(o => !o)}>
-                <span className='q-card__index'>Q{index + 1}</span>
-                <p className='q-card__question'>{item.question}</p>
-                <span className={`q-card__chevron ${open ? 'q-card__chevron--open' : ''}`}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+        <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.04, duration: 0.3 }}
+            className="glass-card overflow-hidden"
+        >
+            <button
+                id={`question-${index}`}
+                onClick={() => setOpen(o => !o)}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/3 transition-colors"
+                aria-expanded={open}
+            >
+                <span className="w-7 h-7 rounded-lg bg-gradient-main flex items-center justify-center text-white text-[0.65rem] font-bold shrink-0">
+                    Q{index + 1}
                 </span>
+                <p className="flex-1 text-sm font-medium text-primary leading-snug">{item.question}</p>
+                <motion.div
+                    animate={{ rotate: open ? 180 : 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="shrink-0 text-muted"
+                >
+                    <ChevronDown className="w-4 h-4" />
+                </motion.div>
+            </button>
+
+            <AnimatePresence initial={false}>
+                {open && (
+                    <motion.div
+                        key="body"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25, ease: 'easeInOut' }}
+                        className="overflow-hidden"
+                    >
+                        <div className="px-4 pb-4 pt-1 border-t border-border flex flex-col gap-3">
+                            <div className="flex flex-col gap-1.5">
+                                <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-accent px-2 py-0.5 rounded-full bg-accent/10 w-fit">
+                                    <Zap className="w-3 h-3" />
+                                    Why they ask this
+                                </span>
+                                <p className="text-sm text-soft leading-relaxed">{item.intention}</p>
+                            </div>
+                            <div className="flex flex-col gap-1.5">
+                                <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-400/10 w-fit">
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    Model Answer
+                                </span>
+                                <p className="text-sm text-soft leading-relaxed">{item.answer}</p>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </motion.div>
+    );
+};
+
+// ── Roadmap Day Card ──────────────────────────────────────────────────────
+const RoadMapDay = ({ day, index }) => (
+    <motion.div
+        initial={{ opacity: 0, x: -12 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: index * 0.06 }}
+        className="flex gap-4"
+    >
+        {/* Timeline dot */}
+        <div className="flex flex-col items-center">
+            <div className="w-8 h-8 rounded-full bg-gradient-main flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-glow-sm">
+                {day.day}
             </div>
-            {open && (
-                <div className='q-card__body'>
-                    <div className='q-card__section'>
-                        <span className='q-card__tag q-card__tag--intention'>Intention</span>
-                        <p>{item.intention}</p>
-                    </div>
-                    <div className='q-card__section'>
-                        <span className='q-card__tag q-card__tag--answer'>Model Answer</span>
-                        <p>{item.answer}</p>
-                    </div>
+            <div className="w-px flex-1 bg-border mt-2" />
+        </div>
+        {/* Content */}
+        <div className="glass-card p-4 flex-1 mb-3">
+            <h3 className="font-semibold text-primary text-sm mb-2">{day.focus}</h3>
+            <ul className="flex flex-col gap-1.5">
+                {day.tasks.map((task, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-soft">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent mt-1.5 shrink-0" />
+                        {task}
+                    </li>
+                ))}
+            </ul>
+        </div>
+    </motion.div>
+);
+
+// ── Match Score Ring ──────────────────────────────────────────────────────
+const MatchScoreRing = ({ score }) => {
+    const radius = 36;
+    const circ = 2 * Math.PI * radius;
+    const offset = circ - (score / 100) * circ;
+    const color = score >= 80 ? '#34d399' : score >= 60 ? '#fbbf24' : '#f87171';
+
+    return (
+        <div className="flex flex-col items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted">Match Score</p>
+            <div className="relative w-24 h-24">
+                <svg className="w-full h-full -rotate-90" viewBox="0 0 84 84">
+                    <circle cx="42" cy="42" r={radius} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
+                    <motion.circle
+                        cx="42" cy="42" r={radius}
+                        fill="none"
+                        stroke={color}
+                        strokeWidth="8"
+                        strokeLinecap="round"
+                        strokeDasharray={circ}
+                        initial={{ strokeDashoffset: circ }}
+                        animate={{ strokeDashoffset: offset }}
+                        transition={{ duration: 1.2, ease: 'easeOut', delay: 0.3 }}
+                        style={{ filter: `drop-shadow(0 0 6px ${color}88)` }}
+                    />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-2xl font-extrabold text-primary leading-none">{score}</span>
+                    <span className="text-xs text-muted">%</span>
                 </div>
-            )}
+            </div>
+            <p className="text-xs text-soft text-center">
+                {score >= 80 ? '🎯 Strong match!' : score >= 60 ? '📈 Good fit' : '⚡ Needs preparation'}
+            </p>
         </div>
-    )
-}
+    );
+};
 
-const RoadMapDay = ({ day }) => (
-    <div className='roadmap-day'>
-        <div className='roadmap-day__header'>
-            <span className='roadmap-day__badge'>Day {day.day}</span>
-            <h3 className='roadmap-day__focus'>{day.focus}</h3>
-        </div>
-        <ul className='roadmap-day__tasks'>
-            {day.tasks.map((task, i) => (
-                <li key={i}>
-                    <span className='roadmap-day__bullet' />
-                    {task}
-                </li>
-            ))}
-        </ul>
-    </div>
-)
-
-// ── Main Component ────────────────────────────────────────────────────────────
+// ── Main Interview Page ───────────────────────────────────────────────────
 const Interview = () => {
-    const [ activeNav, setActiveNav ] = useState('technical')
-    const { report, getReportById, loading, getResumePdf } = useInterview()
-    const { interviewId } = useParams()
+    const [activeNav, setActiveNav] = useState('technical');
+    const { report, getReportById, loading, getResumePdf } = useInterview();
+    const { interviewId } = useParams();
+    const navigate = useNavigate();
+    const { toast } = useToast();
+    const [downloading, setDownloading] = useState(false);
 
     useEffect(() => {
-        if (interviewId) {
-            getReportById(interviewId)
+        if (interviewId) getReportById(interviewId);
+    }, [interviewId]);
+
+    const handleDownload = async () => {
+        setDownloading(true);
+        try {
+            await getResumePdf(interviewId);
+            toast.success('Resume PDF downloaded!');
+        } catch {
+            toast.error('Download failed. Please try again.');
+        } finally {
+            setDownloading(false);
         }
-    }, [ interviewId ])
-
-
+    };
 
     if (loading || !report) {
         return (
-            <main className='loading-screen'>
-                <h1>Loading your interview plan...</h1>
+            <main className="w-full">
+                <InterviewPageSkeleton />
             </main>
-        )
+        );
     }
 
-    const scoreColor =
-        report.matchScore >= 80 ? 'score--high' :
-            report.matchScore >= 60 ? 'score--mid' : 'score--low'
-
+    const activeItem = NAV_ITEMS.find(n => n.id === activeNav);
 
     return (
-        <div className='interview-page'>
-            <div className='interview-layout'>
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="w-full flex min-h-[calc(100vh-4rem)]"
+        >
+            {/* ── Left Nav ── */}
+            <nav className="hidden md:flex flex-col w-52 shrink-0 border-r border-border bg-panel/30 p-4 gap-2 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
+                <button
+                    onClick={() => navigate('/')}
+                    className="flex items-center gap-2 text-xs text-muted hover:text-accent transition-colors mb-2 group"
+                >
+                    <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+                    Back to Home
+                </button>
 
-                {/* ── Left Nav ── */}
-                <nav className='interview-nav'>
-                    <div className="nav-content">
-                        <p className='interview-nav__label'>Sections</p>
-                        {NAV_ITEMS.map(item => (
-                            <button
-                                key={item.id}
-                                className={`interview-nav__item ${activeNav === item.id ? 'interview-nav__item--active' : ''}`}
-                                onClick={() => setActiveNav(item.id)}
-                            >
-                                <span className='interview-nav__icon'>{item.icon}</span>
-                                {item.label}
-                            </button>
-                        ))}
-                    </div>
+                <p className="text-[0.65rem] font-bold uppercase tracking-widest text-muted px-2 mb-1">Sections</p>
+
+                {NAV_ITEMS.map(item => (
+                    <motion.button
+                        key={item.id}
+                        id={`nav-${item.id}`}
+                        onClick={() => setActiveNav(item.id)}
+                        whileHover={{ x: 2 }}
+                        className={`relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left ${
+                            activeNav === item.id
+                                ? 'bg-accent/10 text-accent ring-1 ring-accent/20'
+                                : 'text-soft hover:bg-white/5 hover:text-primary'
+                        }`}
+                    >
+                        <item.Icon className="w-4 h-4 shrink-0" />
+                        {item.label}
+                        {activeNav === item.id && (
+                            <motion.div
+                                layoutId="nav-indicator"
+                                className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-accent rounded-full"
+                            />
+                        )}
+                    </motion.button>
+                ))}
+
+                <div className="flex-1" />
+
+                {/* Download button */}
+                <motion.button
+                    id="download-resume-btn"
+                    onClick={handleDownload}
+                    disabled={downloading}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-main text-white text-xs font-semibold shadow-lg shadow-accent/20 hover:shadow-accent/40 disabled:opacity-60 disabled:pointer-events-none transition-all"
+                >
+                    {downloading ? <Spinner size="sm" /> : <Download className="w-3.5 h-3.5" />}
+                    {downloading ? 'Downloading...' : 'Download Resume'}
+                </motion.button>
+            </nav>
+
+            {/* ── Mobile bottom nav ── */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex bg-background/90 backdrop-blur-lg border-t border-border px-2 py-1.5 gap-1 safe-bottom">
+                {NAV_ITEMS.map(item => (
                     <button
-                        onClick={() => { getResumePdf(interviewId) }}
-                        className='button primary-button' >
-                        <svg height={"0.8rem"} style={{ marginRight: "0.8rem" }} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M10.6144 17.7956 11.492 15.7854C12.2731 13.9966 13.6789 12.5726 15.4325 11.7942L17.8482 10.7219C18.6162 10.381 18.6162 9.26368 17.8482 8.92277L15.5079 7.88394C13.7092 7.08552 12.2782 5.60881 11.5105 3.75894L10.6215 1.61673C10.2916.821765 9.19319.821767 8.8633 1.61673L7.97427 3.75892C7.20657 5.60881 5.77553 7.08552 3.97685 7.88394L1.63658 8.92277C.868537 9.26368.868536 10.381 1.63658 10.7219L4.0523 11.7942C5.80589 12.5726 7.21171 13.9966 7.99275 15.7854L8.8704 17.7956C9.20776 18.5682 10.277 18.5682 10.6144 17.7956ZM19.4014 22.6899 19.6482 22.1242C20.0882 21.1156 20.8807 20.3125 21.8695 19.8732L22.6299 19.5353C23.0412 19.3526 23.0412 18.7549 22.6299 18.5722L21.9121 18.2532C20.8978 17.8026 20.0911 16.9698 19.6586 15.9269L19.4052 15.3156C19.2285 14.8896 18.6395 14.8896 18.4628 15.3156L18.2094 15.9269C17.777 16.9698 16.9703 17.8026 15.956 18.2532L15.2381 18.5722C14.8269 18.7549 14.8269 19.3526 15.2381 19.5353L15.9985 19.8732C16.9874 20.3125 17.7798 21.1156 18.2198 22.1242L18.4667 22.6899C18.6473 23.104 19.2207 23.104 19.4014 22.6899Z"></path></svg>
-                        Download Resume
+                        key={item.id}
+                        onClick={() => setActiveNav(item.id)}
+                        className={`flex-1 flex flex-col items-center gap-0.5 py-1.5 rounded-xl text-[0.6rem] font-semibold transition-colors ${
+                            activeNav === item.id ? 'text-accent bg-accent/10' : 'text-muted'
+                        }`}
+                    >
+                        <item.Icon className="w-4 h-4" />
+                        {item.label}
                     </button>
-                </nav>
+                ))}
+            </div>
 
-                <div className='interview-divider' />
-
-                {/* ── Center Content ── */}
-                <main className='interview-content'>
-                    {activeNav === 'technical' && (
-                        <section>
-                            <div className='content-header'>
-                                <h2>Technical Questions</h2>
-                                <span className='content-header__count'>{report.technicalQuestions.length} questions</span>
+            {/* ── Main Content ── */}
+            <main className="flex-1 p-4 sm:p-6 overflow-y-auto pb-24 md:pb-6">
+                <AnimatePresence mode="wait">
+                    <motion.section
+                        key={activeNav}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -6 }}
+                        transition={{ duration: 0.22 }}
+                        className="flex flex-col gap-4"
+                    >
+                        {/* Section header */}
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-accent/10 ring-1 ring-accent/20 flex items-center justify-center">
+                                {activeItem && <activeItem.Icon className="w-4 h-4 text-accent" />}
                             </div>
-                            <div className='q-list'>
+                            <div>
+                                <h2 className="font-bold text-primary">{activeItem?.fullLabel}</h2>
+                                <p className="text-xs text-muted">
+                                    {activeNav === 'technical' && `${report.technicalQuestions.length} questions`}
+                                    {activeNav === 'behavioral' && `${report.behavioralQuestions.length} questions`}
+                                    {activeNav === 'roadmap' && `${report.preparationPlan.length}-day plan`}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Questions */}
+                        {activeNav === 'technical' && (
+                            <div className="flex flex-col gap-3">
                                 {report.technicalQuestions.map((q, i) => (
                                     <QuestionCard key={i} item={q} index={i} />
                                 ))}
                             </div>
-                        </section>
-                    )}
+                        )}
 
-                    {activeNav === 'behavioral' && (
-                        <section>
-                            <div className='content-header'>
-                                <h2>Behavioral Questions</h2>
-                                <span className='content-header__count'>{report.behavioralQuestions.length} questions</span>
-                            </div>
-                            <div className='q-list'>
+                        {activeNav === 'behavioral' && (
+                            <div className="flex flex-col gap-3">
                                 {report.behavioralQuestions.map((q, i) => (
                                     <QuestionCard key={i} item={q} index={i} />
                                 ))}
                             </div>
-                        </section>
-                    )}
+                        )}
 
-                    {activeNav === 'roadmap' && (
-                        <section>
-                            <div className='content-header'>
-                                <h2>Preparation Road Map</h2>
-                                <span className='content-header__count'>{report.preparationPlan.length}-day plan</span>
-                            </div>
-                            <div className='roadmap-list'>
-                                {report.preparationPlan.map((day) => (
-                                    <RoadMapDay key={day.day} day={day} />
+                        {activeNav === 'roadmap' && (
+                            <div className="flex flex-col pl-0">
+                                {report.preparationPlan.map((day, i) => (
+                                    <RoadMapDay key={day.day} day={day} index={i} />
                                 ))}
                             </div>
-                        </section>
-                    )}
-                </main>
+                        )}
+                    </motion.section>
+                </AnimatePresence>
+            </main>
 
-                <div className='interview-divider' />
+            {/* ── Right Sidebar ── */}
+            <aside className="hidden lg:flex flex-col w-56 shrink-0 border-l border-border bg-panel/30 p-4 gap-5 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
+                {/* Match Score */}
+                <MatchScoreRing score={report.matchScore} />
 
-                {/* ── Right Sidebar ── */}
-                <aside className='interview-sidebar'>
+                <div className="h-px bg-border" />
 
-                    {/* Match Score */}
-                    <div className='match-score'>
-                        <p className='match-score__label'>Match Score</p>
-                        <div className={`match-score__ring ${scoreColor}`}>
-                            <span className='match-score__value'>{report.matchScore}</span>
-                            <span className='match-score__pct'>%</span>
-                        </div>
-                        <p className='match-score__sub'>Strong match for this role</p>
-                    </div>
-
-                    <div className='sidebar-divider' />
-
-                    {/* Skill Gaps */}
-                    <div className='skill-gaps'>
-                        <p className='skill-gaps__label'>Skill Gaps</p>
-                        <div className='skill-gaps__list'>
-                            {report.skillGaps.map((gap, i) => (
-                                <span key={i} className={`skill-tag skill-tag--${gap.severity}`}>
+                {/* Skill Gaps */}
+                <div className="flex flex-col gap-3">
+                    <p className="text-xs font-bold uppercase tracking-widest text-muted">Skill Gaps</p>
+                    <div className="flex flex-wrap gap-1.5">
+                        {report.skillGaps.map((gap, i) => {
+                            const cfg = severityConfig[gap.severity] || severityConfig.low;
+                            return (
+                                <motion.span
+                                    key={i}
+                                    initial={{ opacity: 0, scale: 0.85 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ delay: i * 0.05 }}
+                                    className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ring-1 ${cfg.cls}`}
+                                >
+                                    <cfg.Icon className="w-3 h-3" />
                                     {gap.skill}
-                                </span>
-                            ))}
-                        </div>
+                                </motion.span>
+                            );
+                        })}
                     </div>
+                </div>
+            </aside>
+        </motion.div>
+    );
+};
 
-                </aside>
-            </div>
-        </div>
-    )
-}
-
-export default Interview
+export default Interview;

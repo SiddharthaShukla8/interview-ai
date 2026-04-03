@@ -1,39 +1,63 @@
-const { Router } = require('express')
-const authController = require("../controllers/auth.controller")
-const authMiddleware = require("../middlewares/auth.middleware")
+const { Router } = require('express');
+const passport   = require('passport');
+const authController = require('../controllers/auth.controller');
+const { googleCallbackController } = require('../controllers/google.auth.controller');
+const authMiddleware = require('../middlewares/auth.middleware');
+const { validate, registerSchema, loginSchema } = require('../middlewares/validate.middleware');
 
-const authRouter = Router()
+const authRouter = Router();
 
-/**
- * @route POST /api/auth/register
- * @description Register a new user
- * @access Public
- */
-authRouter.post("/register", authController.registerUserController)
-
+// ── Local Auth ────────────────────────────────────────────────────────────────
 
 /**
- * @route POST /api/auth/login
- * @description login user with email and password
- * @access Public
+ * POST /api/auth/register
  */
-authRouter.post("/login", authController.loginUserController)
-
+authRouter.post('/register', validate(registerSchema), authController.registerUserController);
 
 /**
- * @route GET /api/auth/logout
- * @description clear token from user cookie and add the token in blacklist
- * @access public
+ * POST /api/auth/login
  */
-authRouter.get("/logout", authController.logoutUserController)
-
+authRouter.post('/login', validate(loginSchema), authController.loginUserController);
 
 /**
- * @route GET /api/auth/get-me
- * @description get the current logged in user details
- * @access private
+ * GET /api/auth/logout
  */
-authRouter.get("/get-me", authMiddleware.authUser, authController.getMeController)
+authRouter.get('/logout', authController.logoutUserController);
 
+/**
+ * GET /api/auth/get-me
+ * @private
+ */
+authRouter.get('/get-me', authMiddleware.authUser, authController.getMeController);
 
-module.exports = authRouter
+// ── Google OAuth ──────────────────────────────────────────────────────────────
+
+/**
+ * GET /api/auth/google
+ * Initiates Google OAuth consent screen
+ */
+authRouter.get(
+    '/google',
+    passport.authenticate('google', {
+        scope: ['profile', 'email'],
+        prompt: 'select_account',  // always show account picker
+    })
+);
+
+/**
+ * GET /api/auth/google/callback
+ * Google redirects here after user grants permission.
+ * On success → issue JWT → redirect to frontend /oauth/callback?token=...
+ * On failure → redirect to frontend /login?error=google_failed
+ */
+authRouter.get(
+    '/google/callback',
+    passport.authenticate('google', {
+        // Redirect to frontend on failure (don't use session:false here — let passport manage the session for this handshake)
+        failureRedirect: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/login?error=google_failed`,
+        failureMessage: true,
+    }),
+    googleCallbackController
+);
+
+module.exports = authRouter;
