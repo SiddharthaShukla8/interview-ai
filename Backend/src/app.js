@@ -9,6 +9,9 @@ const errorMiddleware = require('./middlewares/error.middleware');
 
 const app = express();
 
+// Trust the proxy (Render, Vercel, Heroku, etc.) so we get the correct Host and Protocol
+app.set('trust proxy', 1);
+
 // ── Health Check (before any middleware — always fast) ──────────────────────
 app.get('/health', (_req, res) => {
     res.json({
