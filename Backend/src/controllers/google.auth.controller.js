@@ -7,9 +7,21 @@ const jwt = require('jsonwebtoken');
 async function googleCallbackController(req, res) {
     try {
         const user = req.user;
-        
         // Strip trailing slashes to avoid double slashes in URL
-        let origin = req.session.oauthOrigin || process.env.FRONTEND_URL || 'http://localhost:5174';
+        let origin = process.env.FRONTEND_URL_PROD || process.env.FRONTEND_URL || 'http://localhost:5174';
+        
+        // Dynamically decode exact origin from Google's 'state' payload to prevent fallback redirects
+        if (req.query.state) {
+            try {
+                const decodedState = JSON.parse(Buffer.from(req.query.state, 'base64').toString('ascii'));
+                if (decodedState.origin) {
+                    origin = decodedState.origin;
+                }
+            } catch (e) {
+                console.error("Failed to parse state", e);
+            }
+        }
+        
         if (origin.endsWith('/')) origin = origin.slice(0, -1);
 
         if (!user) {

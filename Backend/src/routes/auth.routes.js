@@ -38,10 +38,17 @@ authRouter.get('/get-me', authMiddleware.authUser, authController.getMeControlle
  */
 authRouter.get(
     '/google',
-    passport.authenticate('google', {
-        scope: ['profile', 'email'],
-        prompt: 'select_account',
-    })
+    (req, res, next) => {
+        // Capture the exact frontend location so we can redirect back there natively using OAuth 'state'
+        let origin = req.headers.referer ? new URL(req.headers.referer).origin : (process.env.FRONTEND_URL_PROD || process.env.FRONTEND_URL || 'http://localhost:5174');
+        const state = Buffer.from(JSON.stringify({ origin })).toString('base64');
+        
+        passport.authenticate('google', {
+            scope: ['profile', 'email'],
+            prompt: 'select_account',
+            state: state
+        })(req, res, next);
+    }
 );
 
 /**
