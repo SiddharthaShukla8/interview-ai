@@ -6,7 +6,11 @@ const sizeMap = {
 
 const Spinner = ({ size = 'md', className = '' }) => (
     <div
-        className={`rounded-full border-4 border-white/20 border-t-white animate-spin ${sizeMap[size]} ${className}`}
+        className={`rounded-full animate-spin ${sizeMap[size]} ${className}`}
+        style={{
+            borderColor: 'color-mix(in srgb, var(--accent) 16%, transparent)',
+            borderTopColor: 'var(--accent)',
+        }}
         role="status"
         aria-label="Loading"
     />

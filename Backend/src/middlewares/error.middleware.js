@@ -5,6 +5,27 @@
 function errorMiddleware(err, req, res, _next) {
     console.error(`[Error] ${req.method} ${req.path}:`, err.message);
 
+    if (err.name === 'MulterError') {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(413).json({
+                success: false,
+                message: 'Resume file is too large. Please upload a PDF smaller than 5MB.',
+            });
+        }
+
+        return res.status(400).json({
+            success: false,
+            message: err.message || 'There was a problem processing the uploaded file.',
+        });
+    }
+
+    if (err.code === 'UNSUPPORTED_FILE_TYPE') {
+        return res.status(400).json({
+            success: false,
+            message: err.message || 'Please upload a PDF resume.',
+        });
+    }
+
     // Mongoose duplicate key
     if (err.code === 11000) {
         const field = Object.keys(err.keyPattern || {})[0] || 'field';

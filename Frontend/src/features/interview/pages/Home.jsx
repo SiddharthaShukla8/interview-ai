@@ -1,67 +1,89 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { useInterview } from '../hooks/useInterview.js';
+import React, { useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-    Briefcase, User, Upload, FileText, X, Sparkles,
-    Clock, ChevronRight, Calendar, BarChart2, Plus
+    ArrowUpRight,
+    BarChart2,
+    Briefcase,
+    Calendar,
+    CheckCircle2,
+    ChevronRight,
+    Clock,
+    FileText,
+    Plus,
+    ShieldCheck,
+    Sparkles,
+    Upload,
+    User,
+    X,
 } from 'lucide-react';
+import { useInterview } from '../hooks/useInterview.js';
 import { HomePageSkeleton } from '@/components/SkeletonLoader.jsx';
 import EmptyState from '@/components/EmptyState.jsx';
 import Spinner from '@/components/Spinner.jsx';
 import { useToast } from '@/components/ToastContext.jsx';
+import { getApiErrorMessage } from '@/lib/api.js';
 
-// ── Char counter ────────────────────────────────────────────────────────────
 const MAX_JD = 5000;
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-// ── Match Score Badge ───────────────────────────────────────────────────────
-const ScoreBadge = ({ score }) => {
-    const color =
-        score >= 80 ? 'text-emerald-400 bg-emerald-400/10 ring-emerald-400/20'
-        : score >= 60 ? 'text-yellow-400 bg-yellow-400/10 ring-yellow-400/20'
-        : 'text-red-400 bg-red-400/10 ring-red-400/20';
-    return (
-        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ring-1 ${color}`}>
-            {score}% match
-        </span>
-    );
+const scoreStyles = {
+    strong: 'bg-emerald-500/12 text-emerald-700 ring-emerald-500/20 dark:text-emerald-300',
+    medium: 'bg-amber-500/12 text-amber-700 ring-amber-500/20 dark:text-amber-300',
+    light: 'bg-rose-500/12 text-rose-700 ring-rose-500/20 dark:text-rose-300',
 };
 
-// ── Report Card ─────────────────────────────────────────────────────────────
+const getScoreStyle = (score) => {
+    if (score >= 80) return scoreStyles.strong;
+    if (score >= 60) return scoreStyles.medium;
+    return scoreStyles.light;
+};
+
+const ScoreBadge = ({ score }) => (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${getScoreStyle(score)}`}>
+        {score}% match
+    </span>
+);
+
 const ReportCard = ({ report, index, onClick }) => (
-    <motion.div
+    <motion.button
+        type="button"
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.06, duration: 0.35 }}
-        whileHover={{ y: -2, transition: { duration: 0.2 } }}
+        whileHover={{ y: -2 }}
         onClick={onClick}
-        className="group glass-card p-4 cursor-pointer hover:border-accent/30 hover:shadow-glow-sm transition-all duration-300"
-        role="button"
-        tabIndex={0}
-        onKeyDown={e => e.key === 'Enter' && onClick()}
+        className="surface-card group flex w-full flex-col gap-3 p-4 text-left transition-all duration-300 hover:border-accent/35 hover:shadow-[0_24px_40px_-32px_rgba(79,70,229,0.45)]"
     >
         <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center shrink-0 ring-1 ring-accent/20">
-                    <FileText className="w-4 h-4 text-accent" />
+            <div className="flex min-w-0 items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent/10 text-accent ring-1 ring-accent/15">
+                    <FileText className="h-[1.125rem] w-[1.125rem]" />
                 </div>
+
                 <div className="min-w-0">
-                    <h3 className="font-semibold text-primary text-sm truncate">{report.title || 'Untitled Position'}</h3>
-                    <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted">
-                        <Calendar className="w-3 h-3" />
-                        {new Date(report.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    <h3 className="truncate text-sm font-semibold text-primary">{report.title || 'Untitled Position'}</h3>
+                    <div className="mt-1 flex items-center gap-1.5 text-xs text-muted">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {new Date(report.createdAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                        })}
                     </div>
                 </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-                <ScoreBadge score={report.matchScore} />
-                <ChevronRight className="w-4 h-4 text-muted group-hover:text-accent transition-colors" />
-            </div>
+
+            <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-muted transition-colors group-hover:text-accent" />
         </div>
-    </motion.div>
+
+        <div className="flex items-center justify-between gap-2">
+            <ScoreBadge score={report.matchScore || 0} />
+            <span className="text-xs font-medium text-muted">Open plan</span>
+        </div>
+    </motion.button>
 );
 
-// ── Home Page ────────────────────────────────────────────────────────────────
 const Home = () => {
     const { loading, generateReport, reports } = useInterview();
     const [jobDescription, setJobDescription] = useState('');
@@ -69,59 +91,98 @@ const Home = () => {
     const [selectedFile, setSelectedFile] = useState(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
-    const resumeInputRef = useRef();
+    const [inlineError, setInlineError] = useState('');
+    const resumeInputRef = useRef(null);
     const navigate = useNavigate();
     const { toast } = useToast();
 
-    const handleFileChange = (e) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            if (file.size > 5 * 1024 * 1024) {
-                toast.error('File too large. Max size is 5MB.');
-                return;
-            }
-            setSelectedFile(file);
-            toast.success(`Resume "${file.name}" uploaded!`);
+    const jdLength = jobDescription.length;
+    const jdPercent = Math.min(100, (jdLength / MAX_JD) * 100);
+    const hasProfileInput = Boolean(selectedFile) || Boolean(selfDescription.trim());
+
+    const attachFile = useCallback((file) => {
+        if (!file) {
+            return false;
         }
+
+        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+        if (!isPdf) {
+            toast.error('Please upload a PDF resume.');
+            return false;
+        }
+
+        if (file.size > MAX_FILE_SIZE) {
+            toast.error('Resume file is too large. Please upload a PDF smaller than 5MB.');
+            return false;
+        }
+
+        setSelectedFile(file);
+        setInlineError('');
+        toast.success(`Resume "${file.name}" uploaded.`);
+        return true;
+    }, [toast]);
+
+    const handleFileChange = (event) => {
+        attachFile(event.target.files?.[0]);
     };
 
-    const handleDrop = useCallback((e) => {
-        e.preventDefault();
+    const handleDrop = useCallback((event) => {
+        event.preventDefault();
         setIsDragOver(false);
-        const file = e.dataTransfer.files?.[0];
-        if (file?.type === 'application/pdf') {
-            setSelectedFile(file);
-            toast.success(`Resume "${file.name}" uploaded!`);
-        } else {
-            toast.error('Please upload a PDF file.');
-        }
-    }, [toast]);
+        attachFile(event.dataTransfer.files?.[0]);
+    }, [attachFile]);
 
     const handleRemoveFile = () => {
         setSelectedFile(null);
-        if (resumeInputRef.current) resumeInputRef.current.value = '';
+        if (resumeInputRef.current) {
+            resumeInputRef.current.value = '';
+        }
         toast.info('Resume removed.');
     };
 
     const handleGenerateReport = async () => {
-        if (!jobDescription.trim()) {
-            toast.error('Job description is required!');
+        const trimmedJobDescription = jobDescription.trim();
+        const trimmedSelfDescription = selfDescription.trim();
+
+        if (!trimmedJobDescription) {
+            const message = 'Add the target job description before generating a plan.';
+            setInlineError(message);
+            toast.error(message);
             return;
         }
-        if (!selectedFile && !selfDescription.trim()) {
-            toast.error('Please provide a resume or self-description.');
+
+        if (!selectedFile && !trimmedSelfDescription) {
+            const message = 'Add a resume or a quick self-description so the plan can be personalized.';
+            setInlineError(message);
+            toast.error(message);
             return;
         }
+
+        setInlineError('');
         setIsGenerating(true);
+
         try {
-            const data = await generateReport({ jobDescription, selfDescription, resumeFile: selectedFile });
-            if (data?._id) {
-                toast.success('Interview plan generated! Redirecting...');
-                navigate(`/interview/${data._id}`);
+            const response = await generateReport({
+                jobDescription: trimmedJobDescription,
+                selfDescription: trimmedSelfDescription,
+                resumeFile: selectedFile,
+            });
+
+            response?.warnings?.forEach((warning) => {
+                toast.warning(warning, { duration: 6000 });
+            });
+
+            if (response?.interviewReport?._id) {
+                toast.success('Interview plan generated successfully.');
+                navigate(`/interview/${response.interviewReport._id}`);
+                return;
             }
-        } catch (err) {
-            toast.error('Failed to generate report. Please try again.');
-            console.error(err);
+
+            throw new Error('The report was created without a valid identifier.');
+        } catch (error) {
+            const message = getApiErrorMessage(error, 'We could not generate the interview plan. Please try again.');
+            setInlineError(message);
+            toast.error(message, { duration: 6000 });
         } finally {
             setIsGenerating(false);
         }
@@ -129,274 +190,365 @@ const Home = () => {
 
     if (loading) {
         return (
-            <main className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-8">
+            <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
                 <HomePageSkeleton />
             </main>
         );
     }
 
-    const jdLength = jobDescription.length;
-    const jdPercent = Math.min(100, (jdLength / MAX_JD) * 100);
-
     return (
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col gap-10"
+            className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8"
         >
-            {/* ── Hero Header ── */}
-            <motion.header
-                initial={{ opacity: 0, y: -16 }}
+            <section className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
+                <motion.div
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="surface-card overflow-hidden p-6 sm:p-8"
+                >
+                    <div className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent">
+                        <Sparkles className="h-3.5 w-3.5" />
+                        AI-powered interview strategy
+                    </div>
+
+                    <h1 className="mt-5 max-w-3xl text-4xl font-black tracking-[-0.05em] text-primary sm:text-5xl">
+                        Build a polished <span className="gradient-text">interview plan</span> from your role and profile.
+                    </h1>
+
+                    <p className="mt-4 max-w-2xl text-sm leading-7 text-soft sm:text-base">
+                        Paste the job description, add your resume or a short profile summary, and get a structured prep plan
+                        with likely questions, skill gaps, and a day-by-day roadmap.
+                    </p>
+
+                    <div className="mt-6 flex flex-wrap gap-3">
+                        {[
+                            'Readable in light and dark mode',
+                            'Resume upload with validation',
+                            'Interview questions and roadmap',
+                        ].map((item) => (
+                            <span
+                                key={item}
+                                className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/78 px-3 py-2 text-xs font-medium text-soft"
+                            >
+                                <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                                {item}
+                            </span>
+                        ))}
+                    </div>
+                </motion.div>
+
+                <motion.aside
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.06 }}
+                    className="surface-card flex flex-col gap-4 p-6"
+                >
+                    <div className="flex items-start justify-between gap-3">
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Prep snapshot</p>
+                            <h2 className="mt-2 text-xl font-bold text-primary">Sharper planning, less guesswork</h2>
+                        </div>
+                        <div className="rounded-2xl bg-[linear-gradient(135deg,#4f46e5_0%,#ec4899_100%)] p-3 text-white shadow-[0_18px_38px_-22px_rgba(79,70,229,0.45)]">
+                            <ShieldCheck className="h-5 w-5" />
+                        </div>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                        <div className="surface-panel p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Input quality</p>
+                            <p className="mt-2 text-2xl font-black tracking-[-0.04em] text-primary">{selectedFile || selfDescription ? 'Ready' : 'Start'}</p>
+                            <p className="mt-1 text-xs leading-6 text-soft">Adding both a resume and summary gives the strongest result.</p>
+                        </div>
+
+                        <div className="surface-panel p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Turnaround</p>
+                            <p className="mt-2 text-2xl font-black tracking-[-0.04em] text-primary">~30s</p>
+                            <p className="mt-1 text-xs leading-6 text-soft">The generator validates inputs and then creates the plan step by step.</p>
+                        </div>
+
+                        <div className="surface-panel p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Saved plans</p>
+                            <p className="mt-2 text-2xl font-black tracking-[-0.04em] text-primary">{reports.length}</p>
+                            <p className="mt-1 text-xs leading-6 text-soft">Review earlier interview plans and resume exports whenever you need them.</p>
+                        </div>
+                    </div>
+                </motion.aside>
+            </section>
+
+            <motion.section
+                initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 }}
-                className="flex flex-col items-center text-center gap-3 pt-2"
+                transition={{ delay: 0.08 }}
+                className="surface-card overflow-hidden"
             >
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 ring-1 ring-accent/20 text-accent text-xs font-semibold">
-                    <Sparkles className="w-3.5 h-3.5" />
-                    AI-Powered Interview Strategy
+                <div className="border-b border-border/80 px-6 py-5 sm:px-8">
+                    <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Create a plan</p>
+                            <h2 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-primary">Role context on the left, candidate context on the right</h2>
+                        </div>
+                        <div className="flex items-center gap-2 rounded-full border border-border/80 bg-panel/70 px-3 py-2 text-xs text-soft">
+                            <ArrowUpRight className="h-3.5 w-3.5 text-accent" />
+                            Better results when both fields are complete
+                        </div>
+                    </div>
                 </div>
-                <h1 className="text-3xl sm:text-4xl font-extrabold text-primary tracking-tight leading-tight">
-                    Create Your Custom{' '}
-                    <span className="gradient-text">Interview Plan</span>
-                </h1>
-                <p className="text-sm sm:text-base text-soft max-w-xl">
-                    Let our AI analyze the job requirements and your unique profile to build a tailored winning strategy.
-                </p>
-            </motion.header>
 
-            {/* ── Main Card ── */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.12 }}
-                className="glass-card overflow-hidden"
-            >
-                <div className="flex flex-col lg:flex-row">
+                <div className="grid gap-px bg-border/70 lg:grid-cols-[1.12fr_0.88fr]">
+                    <div className="bg-transparent p-6 sm:p-8">
+                        <div className="mb-4 flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent/10 text-accent ring-1 ring-accent/15">
+                                <Briefcase className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <h3 className="text-base font-bold text-primary">Target Job Description</h3>
+                                    <span className="rounded-full bg-danger/12 px-2 py-0.5 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-danger ring-1 ring-danger/15">
+                                        Required
+                                    </span>
+                                </div>
+                                <p className="mt-1 text-sm text-muted">Paste the responsibilities, requirements, and signals the interviewer will care about.</p>
+                            </div>
+                        </div>
 
-                    {/* ── Left Panel: Job Description ── */}
-                    <div className="flex-1 p-6 flex flex-col gap-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-accent/10 ring-1 ring-accent/20 flex items-center justify-center">
-                                <Briefcase className="w-4 h-4 text-accent" />
+                        <textarea
+                            value={jobDescription}
+                            onChange={(event) => {
+                                setJobDescription(event.target.value.slice(0, MAX_JD));
+                                if (inlineError) {
+                                    setInlineError('');
+                                }
+                            }}
+                            className="field-surface scrollbar-custom min-h-[24rem] resize-none px-4 py-4 text-sm leading-7"
+                            placeholder={`Paste the full job description here.\n\nExample:\nSenior Software Engineer - build scalable product experiences, collaborate with product and design, own production quality, and lead complex technical decisions.`}
+                        />
+
+                        <div className="mt-3 flex items-center gap-3">
+                            <div className="h-2 flex-1 overflow-hidden rounded-full bg-border/80">
+                                <motion.div
+                                    animate={{ width: `${jdPercent}%` }}
+                                    transition={{ duration: 0.2 }}
+                                    className={`h-full rounded-full ${
+                                        jdPercent > 90 ? 'bg-danger' : jdPercent > 70 ? 'bg-warning' : 'bg-accent'
+                                    }`}
+                                />
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <h2 className="font-bold text-primary text-sm">Target Job Description</h2>
-                                <p className="text-xs text-muted">Paste the full JD for best results</p>
-                            </div>
-                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-danger/10 text-danger ring-1 ring-danger/20">
-                                Required
+                            <span className={`text-xs font-semibold tabular-nums ${jdPercent > 90 ? 'text-danger' : 'text-muted'}`}>
+                                {jdLength} / {MAX_JD}
                             </span>
                         </div>
-
-                        <div className="flex flex-col gap-1.5 flex-1">
-                            <textarea
-                                value={jobDescription}
-                                onChange={e => setJobDescription(e.target.value.slice(0, MAX_JD))}
-                                className="flex-1 min-h-[220px] w-full bg-panel/50 border border-border text-primary rounded-xl px-4 py-3 text-sm placeholder:text-muted focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/10 transition-all resize-none leading-relaxed scrollbar-custom"
-                                placeholder={`Paste the full job description here...\ne.g. "Senior Frontend Engineer at Google requires proficiency in React, TypeScript, and large-scale system design..."`}
-                            />
-                            {/* Char counter */}
-                            <div className="flex items-center gap-2 mt-0.5">
-                                <div className="flex-1 h-1 bg-border rounded-full overflow-hidden">
-                                    <motion.div
-                                        className={`h-full rounded-full transition-colors duration-300 ${
-                                            jdPercent > 90 ? 'bg-danger' : jdPercent > 70 ? 'bg-yellow-400' : 'bg-accent'
-                                        }`}
-                                        animate={{ width: `${jdPercent}%` }}
-                                        transition={{ duration: 0.2 }}
-                                    />
-                                </div>
-                                <span className={`text-xs tabular-nums ${jdPercent > 90 ? 'text-danger' : 'text-muted'}`}>
-                                    {jdLength} / {MAX_JD}
-                                </span>
-                            </div>
-                        </div>
                     </div>
 
-                    {/* ── Divider ── */}
-                    <div className="w-px bg-border hidden lg:block" />
-                    <div className="h-px bg-border lg:hidden" />
-
-                    {/* ── Right Panel: Profile ── */}
-                    <div className="flex-1 p-6 flex flex-col gap-5">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-accent-pink/10 ring-1 ring-accent-pink/20 flex items-center justify-center">
-                                <User className="w-4 h-4 text-accent-pink" />
+                    <div className="bg-transparent p-6 sm:p-8">
+                        <div className="mb-4 flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-accent-pink/10 text-accent-pink ring-1 ring-accent-pink/15">
+                                <User className="h-5 w-5" />
                             </div>
+                            <div className="min-w-0 flex-1">
+                                <h3 className="text-base font-bold text-primary">Your Profile</h3>
+                                <p className="mt-1 text-sm text-muted">Upload a PDF resume, add a quick summary, or use both for the strongest result.</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-5">
                             <div>
-                                <h2 className="font-bold text-primary text-sm">Your Profile</h2>
-                                <p className="text-xs text-muted">Resume or self-description</p>
-                            </div>
-                        </div>
+                                <div className="mb-2 flex items-center justify-between gap-2">
+                                    <label className="text-xs font-semibold uppercase tracking-[0.18em] text-soft">Upload Resume</label>
+                                    <span className="rounded-full bg-success/12 px-2.5 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-success ring-1 ring-success/15">
+                                        Best signal
+                                    </span>
+                                </div>
 
-                        {/* Upload zone */}
-                        <div className="flex flex-col gap-2">
-                            <div className="flex items-center justify-between">
-                                <label className="text-xs font-semibold uppercase tracking-wider text-soft">Upload Resume</label>
-                                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400 ring-1 ring-emerald-400/20">
-                                    Best Results
-                                </span>
-                            </div>
-
-                            <AnimatePresence mode="wait">
-                                {selectedFile ? (
-                                    <motion.div
-                                        key="file-preview"
-                                        initial={{ opacity: 0, scale: 0.97 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.97 }}
-                                        className="flex items-center gap-3 p-3 rounded-xl bg-accent/5 border border-accent/20"
-                                    >
-                                        <div className="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
-                                            <FileText className="w-4.5 h-4.5 text-accent" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-medium text-primary truncate">{selectedFile.name}</p>
-                                            <p className="text-xs text-muted">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={handleRemoveFile}
-                                            className="w-7 h-7 rounded-full flex items-center justify-center text-muted hover:text-danger hover:bg-danger/10 transition-all"
-                                            aria-label="Remove file"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    </motion.div>
-                                ) : (
-                                    <motion.label
-                                        key="dropzone"
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        htmlFor="resume-upload"
-                                        onDragOver={e => { e.preventDefault(); setIsDragOver(true); }}
-                                        onDragLeave={() => setIsDragOver(false)}
-                                        onDrop={handleDrop}
-                                        className={`flex flex-col items-center justify-center gap-2 h-28 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 ${
-                                            isDragOver
-                                                ? 'border-accent bg-accent/10 scale-[1.01]'
-                                                : 'border-border hover:border-accent/40 hover:bg-accent/5'
-                                        }`}
-                                    >
+                                <AnimatePresence mode="wait">
+                                    {selectedFile ? (
                                         <motion.div
-                                            animate={isDragOver ? { y: [-2, 2, -2] } : {}}
-                                            transition={{ repeat: Infinity, duration: 0.8 }}
+                                            key="file-preview"
+                                            initial={{ opacity: 0, scale: 0.98 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.98 }}
+                                            className="surface-panel flex items-center gap-3 p-4"
                                         >
-                                            <Upload className={`w-7 h-7 ${isDragOver ? 'text-accent' : 'text-muted'}`} />
+                                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/10 text-accent">
+                                                <FileText className="h-5 w-5" />
+                                            </div>
+
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate text-sm font-semibold text-primary">{selectedFile.name}</p>
+                                                <p className="mt-0.5 text-xs text-muted">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={handleRemoveFile}
+                                                className="icon-button h-10 w-10"
+                                                aria-label="Remove file"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
                                         </motion.div>
-                                        <p className="text-sm text-soft font-medium">
-                                            {isDragOver ? 'Drop your PDF here' : 'Click to upload or drag & drop'}
-                                        </p>
-                                        <p className="text-xs text-muted">PDF only · Max 5MB</p>
-                                        <input
-                                            ref={resumeInputRef}
-                                            id="resume-upload"
-                                            hidden
-                                            type="file"
-                                            accept=".pdf"
-                                            onChange={handleFileChange}
-                                        />
-                                    </motion.label>
-                                )}
-                            </AnimatePresence>
-                        </div>
+                                    ) : (
+                                        <motion.label
+                                            key="dropzone"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            htmlFor="resume-upload"
+                                            onDragOver={(event) => {
+                                                event.preventDefault();
+                                                setIsDragOver(true);
+                                            }}
+                                            onDragLeave={() => setIsDragOver(false)}
+                                            onDrop={handleDrop}
+                                            className={`surface-panel flex h-36 cursor-pointer flex-col items-center justify-center gap-3 border-2 border-dashed p-5 text-center transition-all ${
+                                                isDragOver
+                                                    ? 'border-accent bg-accent/10 shadow-[0_22px_38px_-30px_rgba(79,70,229,0.4)]'
+                                                    : 'hover:border-accent/35 hover:bg-accent/5'
+                                            }`}
+                                        >
+                                            <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${isDragOver ? 'bg-accent text-white' : 'bg-panel text-accent'}`}>
+                                                <Upload className="h-5 w-5" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-primary">
+                                                    {isDragOver ? 'Drop your PDF here' : 'Click to upload or drag and drop'}
+                                                </p>
+                                                <p className="mt-1 text-xs text-muted">PDF only, up to 5MB</p>
+                                            </div>
+                                            <input
+                                                ref={resumeInputRef}
+                                                id="resume-upload"
+                                                hidden
+                                                type="file"
+                                                accept=".pdf,application/pdf"
+                                                onChange={handleFileChange}
+                                            />
+                                        </motion.label>
+                                    )}
+                                </AnimatePresence>
+                            </div>
 
-                        {/* OR divider */}
-                        <div className="flex items-center gap-3">
-                            <div className="flex-1 h-px bg-border" />
-                            <span className="text-xs font-semibold text-muted px-2">OR</span>
-                            <div className="flex-1 h-px bg-border" />
-                        </div>
+                            <div className="flex items-center gap-3">
+                                <div className="soft-divider" />
+                                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">Or</span>
+                                <div className="soft-divider" />
+                            </div>
 
-                        {/* Self description */}
-                        <div className="flex flex-col gap-1.5 flex-1">
-                            <label className="text-xs font-semibold uppercase tracking-wider text-soft" htmlFor="self-desc">
-                                Quick Self-Description
-                            </label>
-                            <textarea
-                                id="self-desc"
-                                value={selfDescription}
-                                onChange={e => setSelfDescription(e.target.value)}
-                                className="flex-1 min-h-[100px] w-full bg-panel/50 border border-border text-primary rounded-xl px-4 py-3 text-sm placeholder:text-muted focus:outline-none focus:border-accent-pink/50 focus:ring-2 focus:ring-accent-pink/10 transition-all resize-none leading-relaxed"
-                                placeholder="Briefly describe your experience, key skills, and years of experience if you don't have a resume handy..."
-                            />
-                        </div>
+                            <div>
+                                <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-soft" htmlFor="self-desc">
+                                    Quick Self-Description
+                                </label>
+                                <textarea
+                                    id="self-desc"
+                                    value={selfDescription}
+                                    onChange={(event) => {
+                                        setSelfDescription(event.target.value);
+                                        if (inlineError) {
+                                            setInlineError('');
+                                        }
+                                    }}
+                                    className="field-surface min-h-[10rem] resize-none px-4 py-4 text-sm leading-7"
+                                    placeholder="Summarize your experience, strongest skills, industry context, and the kind of impact you have delivered."
+                                />
+                            </div>
 
-                        {/* Info note */}
-                        <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-accent/5 border border-accent/15 text-xs text-soft">
-                            <Sparkles className="w-3.5 h-3.5 text-accent mt-0.5 shrink-0" />
-                            Either a <strong className="text-primary mx-0.5">Resume</strong> or a
-                            <strong className="text-primary mx-0.5">Self Description</strong> is required to generate a personalized plan.
+                            <div className="surface-panel flex items-start gap-3 px-4 py-3 text-sm text-soft">
+                                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                                <p>
+                                    Provide at least one profile source. Using both a resume and a short summary usually produces a
+                                    stronger, more personalized interview plan.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* ── Footer Actions ── */}
-                <div className="border-t border-border px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 bg-panel/30">
-                    <div className="flex items-center gap-2 text-xs text-muted">
-                        <Clock className="w-3.5 h-3.5" />
-                        AI-Powered Strategy Generation · Approx 30 seconds
-                    </div>
-                    <motion.button
-                        id="generate-btn"
-                        onClick={handleGenerateReport}
-                        disabled={isGenerating}
-                        whileHover={{ scale: 1.03 }}
-                        whileTap={{ scale: 0.97 }}
-                        className="flex items-center gap-2.5 px-6 py-2.5 rounded-xl bg-gradient-main text-white font-semibold text-sm shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/40 disabled:opacity-60 disabled:pointer-events-none transition-all"
-                    >
-                        {isGenerating ? (
-                            <>
-                                <Spinner size="sm" />
-                                Generating...
-                            </>
-                        ) : (
-                            <>
-                                <Sparkles className="w-4 h-4" />
-                                Generate My Interview Strategy
-                            </>
-                        )}
-                    </motion.button>
-                </div>
-            </motion.div>
+                <div className="border-t border-border/80 bg-panel/55 px-6 py-4 sm:px-8">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-xs font-medium text-muted">
+                                <Clock className="h-3.5 w-3.5 text-accent" />
+                                AI-powered strategy generation with resilient fallback handling
+                            </div>
+                            {inlineError ? (
+                                <p className="rounded-2xl border border-danger/18 bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
+                                    {inlineError}
+                                </p>
+                            ) : (
+                                <p className="text-sm text-soft">
+                                    {hasProfileInput
+                                        ? 'Your profile details are ready. Generate the plan whenever you are comfortable with the inputs.'
+                                        : 'Add the job description and one profile source to unlock the interview plan.'}
+                                </p>
+                            )}
+                        </div>
 
-            {/* ── Recent Reports ── */}
-            <section>
-                <div className="flex items-center justify-between mb-4">
+                        <motion.button
+                            id="generate-btn"
+                            type="button"
+                            onClick={handleGenerateReport}
+                            disabled={isGenerating}
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="btn-primary min-w-[15rem] px-6 py-3 text-sm font-semibold disabled:pointer-events-none disabled:opacity-60"
+                        >
+                            {isGenerating ? (
+                                <>
+                                    <Spinner size="sm" className="!border-white/25" />
+                                    Building your plan...
+                                </>
+                            ) : (
+                                <>
+                                    <Sparkles className="h-[1.125rem] w-[1.125rem]" />
+                                    Generate interview strategy
+                                </>
+                            )}
+                        </motion.button>
+                    </div>
+                </div>
+            </motion.section>
+
+            <section className="space-y-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <h2 className="font-bold text-primary text-lg">Recent Interview Plans</h2>
-                        <p className="text-xs text-muted mt-0.5">{reports.length} plan{reports.length !== 1 ? 's' : ''} generated</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">Library</p>
+                        <h2 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-primary">Recent interview plans</h2>
+                        <p className="mt-1 text-sm text-soft">{reports.length} saved plan{reports.length !== 1 ? 's' : ''} available</p>
                     </div>
+
                     {reports.length > 0 && (
-                        <div className="flex items-center gap-1.5 text-xs text-accent">
-                            <BarChart2 className="w-3.5 h-3.5" />
-                            All plans
+                        <div className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-card/78 px-3 py-2 text-xs text-soft">
+                            <BarChart2 className="h-3.5 w-3.5 text-accent" />
+                            Open a plan to review questions, skill gaps, and the roadmap
                         </div>
                     )}
                 </div>
 
                 {reports.length === 0 ? (
-                    <EmptyState
-                        title="No interview plans yet"
-                        description="Fill out the form above and generate your first AI-powered interview strategy."
-                        action={
-                            <button
-                                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-accent/10 text-accent text-sm font-medium hover:bg-accent/20 transition-colors ring-1 ring-accent/20"
-                            >
-                                <Plus className="w-4 h-4" />
-                                Create your first plan
-                            </button>
-                        }
-                    />
+                    <div className="surface-card">
+                        <EmptyState
+                            title="No interview plans yet"
+                            description="Complete the form above and create your first polished interview strategy."
+                            action={(
+                                <button
+                                    type="button"
+                                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                                    className="btn-secondary px-4 py-2.5 text-sm font-semibold"
+                                >
+                                    <Plus className="h-4 w-4" />
+                                    Create your first plan
+                                </button>
+                            )}
+                        />
+                    </div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {reports.map((report, i) => (
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        {reports.map((report, index) => (
                             <ReportCard
                                 key={report._id}
                                 report={report}
-                                index={i}
+                                index={index}
                                 onClick={() => navigate(`/interview/${report._id}`)}
                             />
                         ))}
@@ -404,13 +556,13 @@ const Home = () => {
                 )}
             </section>
 
-            {/* ── Page Footer ── */}
-            <footer className="flex items-center justify-center gap-6 py-4 text-xs text-muted border-t border-border">
-                <a href="#" className="hover:text-accent transition-colors">Privacy Policy</a>
-                <span className="w-1 h-1 rounded-full bg-border" />
-                <a href="#" className="hover:text-accent transition-colors">Terms of Service</a>
-                <span className="w-1 h-1 rounded-full bg-border" />
-                <a href="#" className="hover:text-accent transition-colors">Help Center</a>
+            <footer className="surface-panel flex flex-col gap-3 px-5 py-4 text-sm text-soft sm:flex-row sm:items-center sm:justify-between">
+                <p>Elevate helps you turn a job description and your background into a clearer interview game plan.</p>
+                <div className="flex flex-wrap gap-2 text-xs">
+                    <span className="rounded-full border border-border/80 bg-card/70 px-3 py-1.5">Visible controls</span>
+                    <span className="rounded-full border border-border/80 bg-card/70 px-3 py-1.5">Light and dark mode</span>
+                    <span className="rounded-full border border-border/80 bg-card/70 px-3 py-1.5">Professional output</span>
+                </div>
             </footer>
         </motion.div>
     );

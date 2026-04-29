@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Mail, Lock, User, UserPlus, Sparkles, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react';
 import Spinner from '@/components/Spinner.jsx';
 import GoogleAuthButton from '../components/GoogleAuthButton.jsx';
+import { getApiErrorMessage } from '@/lib/api.js';
 
 const getStrength = (pw) => {
     let s = 0;
@@ -57,7 +58,7 @@ const Register = () => {
             await handleRegister({ username, email, password });
             navigate('/');
         } catch (err) {
-            setError(err?.response?.data?.message || 'Registration failed. Please try again.');
+            setError(getApiErrorMessage(err, 'Registration failed. Please try again.'));
         } finally {
             setSubmitting(false);
         }

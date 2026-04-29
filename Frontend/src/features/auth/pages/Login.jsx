@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Mail, Lock, LogIn, Sparkles, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import Spinner from '@/components/Spinner.jsx';
 import GoogleAuthButton from '../components/GoogleAuthButton.jsx';
+import { getApiErrorMessage } from '@/lib/api.js';
 
 const Login = () => {
     const { loading, user, handleLogin } = useAuth();
@@ -32,7 +33,7 @@ const Login = () => {
             await handleLogin({ email, password });
             navigate('/');
         } catch (err) {
-            setError(err?.response?.data?.message || 'Invalid email or password.');
+            setError(getApiErrorMessage(err, 'Invalid email or password.'));
         } finally {
             setIsSubmitting(false);
         }
