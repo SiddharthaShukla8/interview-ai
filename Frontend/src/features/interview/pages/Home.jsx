@@ -22,7 +22,8 @@ import { HomePageSkeleton } from '@/components/SkeletonLoader.jsx';
 import EmptyState from '@/components/EmptyState.jsx';
 import Spinner from '@/components/Spinner.jsx';
 import { useToast } from '@/components/ToastContext.jsx';
-import { getApiErrorMessage } from '@/lib/api.js';
+import { clearStoredToken, getApiErrorMessage, isAuthError } from '@/lib/api.js';
+import { useAuth } from '@/features/auth/hooks/useAuth.js';
 
 const MAX_JD = 5000;
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -95,6 +96,7 @@ const Home = () => {
     const resumeInputRef = useRef(null);
     const navigate = useNavigate();
     const { toast } = useToast();
+    const { setUser } = useAuth();
 
     const jdLength = jobDescription.length;
     const jdPercent = Math.min(100, (jdLength / MAX_JD) * 100);
@@ -180,6 +182,16 @@ const Home = () => {
 
             throw new Error('The report was created without a valid identifier.');
         } catch (error) {
+            if (isAuthError(error)) {
+                clearStoredToken();
+                setUser(null);
+                const message = 'Your session expired. Please sign in again to generate an interview plan.';
+                setInlineError(message);
+                toast.error(message, { duration: 6000 });
+                navigate('/login', { replace: true });
+                return;
+            }
+
             const message = getApiErrorMessage(error, 'We could not generate the interview plan. Please try again.');
             setInlineError(message);
             toast.error(message, { duration: 6000 });

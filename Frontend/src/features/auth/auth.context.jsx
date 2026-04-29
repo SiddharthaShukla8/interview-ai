@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect } from 'react';
 import { getMe } from './services/auth.api';
+import { clearStoredToken, getStoredToken, isAuthError } from '@/lib/api.js';
 
 export const AuthContext = createContext();
 
@@ -9,12 +10,21 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const initializeUser = async () => {
+            const token = getStoredToken();
+
+            if (!token) {
+                setUser(null);
+                setLoading(false);
+                return;
+            }
+
             try {
                 const data = await getMe();
-                // data.user now includes: id, username, email, picture, authProvider
                 setUser(data.user);
-            } catch {
-                localStorage.removeItem('token');
+            } catch (error) {
+                if (isAuthError(error)) {
+                    clearStoredToken();
+                }
                 setUser(null);
             } finally {
                 setLoading(false);

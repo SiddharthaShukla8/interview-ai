@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+export const TOKEN_STORAGE_KEY = 'token';
+
 const trimTrailingSlash = (value = '') => value.replace(/\/+$/, '');
 
 const resolveApiBase = () => {
@@ -28,9 +30,33 @@ export const api = axios.create({
     timeout: 90000,
 });
 
+export const getStoredToken = () => {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+
+    return localStorage.getItem(TOKEN_STORAGE_KEY);
+};
+
+export const setStoredToken = (token) => {
+    if (typeof window === 'undefined' || !token) {
+        return;
+    }
+
+    localStorage.setItem(TOKEN_STORAGE_KEY, token);
+};
+
+export const clearStoredToken = () => {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+};
+
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('token');
+        const token = getStoredToken();
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -38,6 +64,11 @@ api.interceptors.request.use(
     },
     (error) => Promise.reject(error)
 );
+
+export const isAuthError = (error) => {
+    const status = error?.response?.status;
+    return status === 401 || status === 403;
+};
 
 export const getApiErrorMessage = (error, fallback = 'Something went wrong. Please try again.') => {
     const message = error?.response?.data?.message;

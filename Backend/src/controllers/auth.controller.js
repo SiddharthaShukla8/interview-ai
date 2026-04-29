@@ -2,6 +2,7 @@ const userModel = require('../models/user.model');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const tokenBlacklistModel = require('../models/blacklist.model');
+const { authCookieClearOptions, authCookieOptions } = require('../utils/cookies');
 
 /** Helper — standardised JWT sign */
 const signToken = (user) =>
@@ -40,7 +41,7 @@ async function registerUserController(req, res, next) {
         const user = await userModel.create({ username, email, password: hash });
 
         const token = signToken(user);
-        res.cookie('token', token, { httpOnly: false, sameSite: 'lax', maxAge: 86400000 });
+        res.cookie('token', token, authCookieOptions);
 
         res.status(201).json({
             success: true,
@@ -80,7 +81,7 @@ async function loginUserController(req, res, next) {
         }
 
         const token = signToken(user);
-        res.cookie('token', token, { httpOnly: false, sameSite: 'lax', maxAge: 86400000 });
+        res.cookie('token', token, authCookieOptions);
 
         res.status(200).json({
             success: true,
@@ -104,7 +105,7 @@ async function logoutUserController(req, res, next) {
         if (token) {
             await tokenBlacklistModel.create({ token });
         }
-        res.clearCookie('token');
+        res.clearCookie('token', authCookieClearOptions);
         res.status(200).json({ success: true, message: 'Logged out successfully.' });
     } catch (err) {
         next(err);

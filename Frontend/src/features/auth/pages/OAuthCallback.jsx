@@ -6,6 +6,7 @@ import { Sparkles } from 'lucide-react';
 import { getMe } from '../services/auth.api';
 import Spinner from '@/components/Spinner.jsx';
 import { useToast } from '@/components/ToastContext.jsx';
+import { clearStoredToken, getApiErrorMessage, setStoredToken } from '@/lib/api.js';
 
 /**
  * OAuthCallback
@@ -19,7 +20,7 @@ import { useToast } from '@/components/ToastContext.jsx';
 const OAuthCallback = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const { setUser } = useAuth();
+    const { setUser, setLoading } = useAuth();
     const { toast } = useToast();
 
     useEffect(() => {
@@ -35,7 +36,8 @@ const OAuthCallback = () => {
         // Save token + fetch user
         (async () => {
             try {
-                localStorage.setItem('token', token);
+                setLoading(true);
+                setStoredToken(token);
                 const data = await getMe();
                 setUser(data.user);
 
@@ -43,12 +45,15 @@ const OAuthCallback = () => {
                 navigate('/', { replace: true });
             } catch (err) {
                 console.error('OAuth callback error:', err);
-                localStorage.removeItem('token');
-                toast.error('Failed to complete sign-in. Please try again.');
+                clearStoredToken();
+                setUser(null);
+                toast.error(getApiErrorMessage(err, 'Failed to complete sign-in. Please try again.'));
                 navigate('/login', { replace: true });
+            } finally {
+                setLoading(false);
             }
         })();
-    }, []); // run once on mount
+    }, [ navigate, searchParams, setLoading, setUser, toast ]);
 
     return (
         <main className="w-full min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center gap-6 p-4">

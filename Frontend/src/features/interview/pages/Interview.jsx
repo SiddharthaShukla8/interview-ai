@@ -19,7 +19,8 @@ import { useInterview } from '../hooks/useInterview.js';
 import { InterviewPageSkeleton } from '@/components/SkeletonLoader.jsx';
 import Spinner from '@/components/Spinner.jsx';
 import { useToast } from '@/components/ToastContext.jsx';
-import { getApiErrorMessage } from '@/lib/api.js';
+import { clearStoredToken, getApiErrorMessage, isAuthError } from '@/lib/api.js';
+import { useAuth } from '@/features/auth/hooks/useAuth.js';
 
 const NAV_ITEMS = [
     { id: 'technical', label: 'Technical', fullLabel: 'Technical Questions', Icon: Code2 },
@@ -207,6 +208,7 @@ const Interview = () => {
     const { interviewId } = useParams();
     const navigate = useNavigate();
     const { toast } = useToast();
+    const { setUser } = useAuth();
 
     useEffect(() => {
         if (!interviewId) {
@@ -215,8 +217,16 @@ const Interview = () => {
 
         let isActive = true;
 
-        getReportById(interviewId).catch(() => {
+        getReportById(interviewId).catch((error) => {
             if (!isActive) {
+                return;
+            }
+
+            if (isAuthError(error)) {
+                clearStoredToken();
+                setUser(null);
+                toast.error('Your session expired. Please sign in again to view this interview plan.');
+                navigate('/login', { replace: true });
                 return;
             }
 
@@ -229,7 +239,7 @@ const Interview = () => {
         };
         // `getReportById` closes over stable context setters. Reload only when the route id changes.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ interviewId ]);
+    }, [ interviewId, navigate, setUser, toast ]);
 
     const handleDownload = async () => {
         setDownloading(true);
@@ -237,6 +247,14 @@ const Interview = () => {
             await getResumePdf(interviewId);
             toast.success('Resume PDF downloaded.');
         } catch (error) {
+            if (isAuthError(error)) {
+                clearStoredToken();
+                setUser(null);
+                toast.error('Your session expired. Please sign in again to download the resume PDF.');
+                navigate('/login', { replace: true });
+                return;
+            }
+
             toast.error(getApiErrorMessage(error, 'Download failed. Please try again.'));
         } finally {
             setDownloading(false);

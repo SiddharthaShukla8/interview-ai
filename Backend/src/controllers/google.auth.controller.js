@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const { authCookieOptions } = require('../utils/cookies');
 
 /**
  * Called after a successful Google OAuth2 callback.
@@ -35,11 +36,7 @@ async function googleCallbackController(req, res) {
         );
 
         // Set cookie for additional security
-        res.cookie('token', token, {
-            httpOnly: false,  // front-end needs to read it via redirect
-            sameSite: 'lax',
-            maxAge: 24 * 60 * 60 * 1000, // 1 day
-        });
+        res.cookie('token', token, authCookieOptions);
 
         // Redirect to frontend OAuth callback page with token in query param
         res.redirect(`${origin}/oauth/callback?token=${token}`);

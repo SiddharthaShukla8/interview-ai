@@ -6,6 +6,7 @@ const rateLimit  = require('express-rate-limit');
 const session    = require('express-session');
 const passport   = require('./config/passport');
 const errorMiddleware = require('./middlewares/error.middleware');
+const { sessionCookieOptions } = require('./utils/cookies');
 
 const app = express();
 
@@ -69,11 +70,7 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'elevate_session_secret_change_me',
     resave: false,
     saveUninitialized: false,
-    cookie: {
-        secure: false,
-        httpOnly: true,
-        maxAge: 10 * 60 * 1000, // 10 min — only needed for OAuth handshake
-    },
+    cookie: sessionCookieOptions,
 }));
 
 // ── Passport ─────────────────────────────────────────────────────────────────
